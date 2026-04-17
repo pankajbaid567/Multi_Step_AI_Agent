@@ -522,7 +522,9 @@ def _provider_for_model(model_name: str) -> str:
     normalized = model_name.strip().lower()
     if normalized.startswith("claude"):
         return "anthropic"
-    return "openai"
+    if normalized.startswith("gpt"):
+        return "openai"
+    return "open_source"
 
 
 def _record_success(

@@ -37,7 +37,7 @@ export default function ExecutionDAG({ steps = [], results = [], currentStepInde
   return (
     <section className="rounded-2xl border border-white/10 bg-[var(--bg-card)]/70 p-4 sm:p-5">
       <h2 className="text-lg font-semibold text-[var(--text-primary)]">Execution Pipeline</h2>
-      <p className="mt-1 text-xs text-[var(--text-secondary)]">Planning -> Executing -> Complete</p>
+      <p className="mt-1 text-xs text-[var(--text-secondary)]">Planning {"->"} Executing {"->"} Complete</p>
 
       <div className="mt-4">
         <div className="grid grid-cols-3 gap-2">

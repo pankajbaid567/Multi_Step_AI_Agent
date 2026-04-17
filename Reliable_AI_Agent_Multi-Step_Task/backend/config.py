@@ -16,20 +16,24 @@ load_dotenv()
 class Settings(BaseSettings):
     """Strongly typed runtime configuration loaded from environment variables."""
 
-    OPENAI_API_KEY: str
-    ANTHROPIC_API_KEY: str
+    OPEN_SOURCE_API_KEY: str | None = None
+    OPEN_SOURCE_BASE_URL: str = "https://router.huggingface.co/v1"
+    OPENAI_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
     TAVILY_API_KEY: str
     REDIS_URL: str = "redis://localhost:6379"
-    PRIMARY_MODEL: str = "gpt-4o"
-    FALLBACK_MODEL: str = "claude-3-5-sonnet-20241022"
+    PRIMARY_MODEL: str = "meta-llama/Llama-3.1-8B-Instruct"
+    FALLBACK_MODEL: str = "Qwen/Qwen2.5-7B-Instruct"
     FALLBACK_MODEL_OPENAI: str | None = None
     FALLBACK_MODEL_ANTHROPIC: str | None = None
-    VALIDATION_MODEL: str = "gpt-4o-mini"
+    VALIDATION_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
     MAX_RETRIES: int = 3
     STEP_TIMEOUT: int = 60
     MAX_STEPS: int = 15
+    GRAPH_RECURSION_LIMIT: int = 0
     CHAOS_MODE: bool = False
     LOG_LEVEL: str = "INFO"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     class Config:
         """Pydantic configuration for environment-based settings loading."""
@@ -37,16 +41,30 @@ class Settings(BaseSettings):
         case_sensitive = True
 
     @property
-    def openai_api_key(self) -> str:
-        """Backward-compatible alias for lowercase OpenAI API key access."""
+    def open_source_api_key(self) -> str:
+        """Primary API key used for open-source model providers (for example OpenRouter)."""
 
-        return self.OPENAI_API_KEY
+        return (self.OPEN_SOURCE_API_KEY or "").strip()
+
+    @property
+    def open_source_base_url(self) -> str:
+        """Base URL for OpenAI-compatible open-source model endpoints."""
+
+        return (self.OPEN_SOURCE_BASE_URL or "").strip()
+
+    @property
+    def openai_api_key(self) -> str:
+        """Backward-compatible OpenAI key alias with open-source key fallback."""
+
+        if self.OPENAI_API_KEY:
+            return self.OPENAI_API_KEY
+        return self.open_source_api_key
 
     @property
     def anthropic_api_key(self) -> str:
         """Backward-compatible alias for lowercase Anthropic API key access."""
 
-        return self.ANTHROPIC_API_KEY
+        return (self.ANTHROPIC_API_KEY or "").strip()
 
     @property
     def tavily_api_key(self) -> str:
@@ -77,6 +95,34 @@ class Settings(BaseSettings):
         """Backward-compatible alias for Anthropic fallback model access."""
 
         return self.FALLBACK_MODEL_ANTHROPIC or self.FALLBACK_MODEL
+
+    @property
+    def graph_recursion_limit(self) -> int:
+        """Optional explicit LangGraph recursion limit; 0 means auto-derive."""
+
+        value = int(self.GRAPH_RECURSION_LIMIT or 0)
+        if value <= 0:
+            return 0
+        return max(value, 25)
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Comma-separated CORS origins normalized into a unique list."""
+
+        raw_origins = (self.CORS_ORIGINS or "").strip()
+        if not raw_origins:
+            return ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+        origins: list[str] = []
+        for origin in raw_origins.split(","):
+            normalized = origin.strip().rstrip("/")
+            if normalized and normalized not in origins:
+                origins.append(normalized)
+
+        if not origins:
+            return ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+        return origins
 
 
 @lru_cache(maxsize=1)

@@ -55,7 +55,18 @@ def get_openai_client() -> AsyncOpenAI:
     global _openai_client
     if _openai_client is None:
         settings = get_settings()
-        _openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
+        api_key = (settings.open_source_api_key or settings.openai_api_key).strip()
+        if not api_key:
+            raise LLMConnectionError(
+                "No LLM API key configured. Set OPEN_SOURCE_API_KEY (recommended) or OPENAI_API_KEY."
+            )
+
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        # OPEN_SOURCE_API_KEY implies OpenAI-compatible open-source endpoint usage.
+        if settings.open_source_api_key and settings.open_source_base_url:
+            client_kwargs["base_url"] = settings.open_source_base_url
+
+        _openai_client = AsyncOpenAI(**client_kwargs)
     return _openai_client
 
 
@@ -64,6 +75,8 @@ def get_anthropic_client() -> AsyncAnthropic:
     global _anthropic_client
     if _anthropic_client is None:
         settings = get_settings()
+        if not settings.anthropic_api_key:
+            raise LLMConnectionError("ANTHROPIC_API_KEY is not configured")
         _anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
     return _anthropic_client
 
@@ -86,11 +99,13 @@ async def call_llm(
     normalized_provider = provider.strip().lower()
     started = perf_counter()
 
-    if normalized_provider not in {"openai", "anthropic"}:
-        raise LLMResponseError(f"Unsupported provider '{provider}'. Expected 'openai' or 'anthropic'.")
+    if normalized_provider not in {"openai", "anthropic", "open_source"}:
+        raise LLMResponseError(
+            f"Unsupported provider '{provider}'. Expected 'open_source', 'openai', or 'anthropic'."
+        )
 
     try:
-        if normalized_provider == "openai":
+        if normalized_provider in {"openai", "open_source"}:
             response = await _call_openai(
                 prompt=prompt,
                 system_prompt=system_prompt,

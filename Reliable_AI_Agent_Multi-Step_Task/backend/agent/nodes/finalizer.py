@@ -219,13 +219,16 @@ def _build_synthesis_prompt(state: AgentState) -> str:
     if not non_success_lines:
         non_success_lines.append("None")
 
+    joined_results = "\n".join(result_lines)
+    joined_non_success = "\n".join(non_success_lines)
+
     return (
         "You are a report synthesizer. Combine these step results into a clear, well-structured final output.\n\n"
         f"Original Task: {state['original_input']}\n\n"
         "Step Results:\n"
-        f"{'\n'.join(result_lines)}\n\n"
+        f"{joined_results}\n\n"
         "Skipped/Failed Steps: "
-        f"{'\n'.join(non_success_lines)}\n\n"
+        f"{joined_non_success}\n\n"
         "Create a coherent, comprehensive response that addresses the original task.\n"
         "Format with clear sections and key takeaways."
     )
@@ -303,4 +306,6 @@ def _infer_provider(model_name: str) -> str:
     normalized = model_name.strip().lower()
     if normalized.startswith("claude"):
         return "anthropic"
-    return "openai"
+    if normalized.startswith("gpt"):
+        return "openai"
+    return "open_source"

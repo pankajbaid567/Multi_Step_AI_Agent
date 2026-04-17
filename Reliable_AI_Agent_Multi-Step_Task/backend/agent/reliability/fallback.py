@@ -15,9 +15,21 @@ from .retry import NON_RETRYABLE_EXCEPTIONS, RETRYABLE_EXCEPTIONS, retry_with_ba
 logger = logging.getLogger(__name__)
 
 FALLBACK_CHAIN = [
-    {"provider": "openai", "model": "gpt-4o", "label": "GPT-4o (Primary)"},
-    {"provider": "openai", "model": "gpt-4o-mini", "label": "GPT-4o-mini (Fallback 1)"},
-    {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022", "label": "Claude 3.5 (Fallback 2)"},
+    {
+        "provider": "open_source",
+        "model": "meta-llama/Llama-3.1-8B-Instruct",
+        "label": "Llama 3.1 8B",
+    },
+    {
+        "provider": "open_source",
+        "model": "Qwen/Qwen2.5-7B-Instruct",
+        "label": "Qwen 2.5 7B",
+    },
+    {
+        "provider": "open_source",
+        "model": "mistralai/Mistral-7B-Instruct-v0.3",
+        "label": "Mistral 7B",
+    },
 ]
 
 

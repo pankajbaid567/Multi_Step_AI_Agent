@@ -9,6 +9,7 @@ from typing import Any, Awaitable, Callable, cast
 
 from langgraph.graph import END, StateGraph
 
+from config import get_settings
 from agent.nodes.executor import executor_node
 from agent.nodes.finalizer import finalizer_node
 from agent.nodes.planner import planner_node
@@ -18,6 +19,7 @@ from models import StepDefinition, StepResult, TraceEntry
 from services.redis_service import get_redis_service
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 CompiledGraph = Any
 START_NODE = "__start__"
@@ -299,13 +301,26 @@ def build_graph(start_node: str = NODE_PLANNER) -> CompiledGraph:
     return graph.compile()
 
 
+def _graph_run_config() -> dict[str, int]:
+    """Return safe graph runtime config with recursion limit sized for this workflow."""
+
+    explicit_limit = settings.graph_recursion_limit
+    if explicit_limit > 0:
+        return {"recursion_limit": explicit_limit}
+
+    max_steps = max(_safe_int(getattr(settings, "MAX_STEPS", 15), default=15), 1)
+    # Each logical step can span several graph node transitions.
+    derived_limit = max_steps * 8
+    return {"recursion_limit": max(derived_limit, 50)}
+
+
 async def run_agent(task_id: str, user_input: str) -> AgentState:
     """Create initial state, build graph, and run full execution."""
     state = create_initial_state(task_id, user_input)
     graph = build_graph(start_node=NODE_PLANNER)
 
     try:
-        final_state = await graph.ainvoke(state)
+        final_state = await graph.ainvoke(state, config=_graph_run_config())
         return final_state
     except Exception as exc:  # pragma: no cover - defensive top-level fallback
         logger.exception("run_agent_failed task_id=%s error=%s", task_id, exc)
@@ -347,7 +362,7 @@ async def resume_agent(task_id: str) -> AgentState:
 
     graph = build_graph(start_node=start_node)
     try:
-        final_state = await graph.ainvoke(state)
+        final_state = await graph.ainvoke(state, config=_graph_run_config())
         return final_state
     except Exception as exc:  # pragma: no cover - defensive top-level fallback
         logger.exception("resume_agent_failed task_id=%s error=%s", task_id, exc)

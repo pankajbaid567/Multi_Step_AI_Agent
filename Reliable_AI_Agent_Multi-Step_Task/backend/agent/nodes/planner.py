@@ -10,6 +10,7 @@ from time import perf_counter
 from typing import Any, List
 
 from agent.state import AgentState
+from config import get_settings
 from models import StepDefinition, TraceEntry
 from services.llm_service import LLMError, call_llm
 
@@ -172,6 +173,8 @@ async def planner_node(state: AgentState) -> AgentState:
         total_tokens = 0
         model_used = ""
         parsed_steps: list[StepDefinition] | None = None
+        planner_model = _get_planner_model()
+        planner_provider = _provider_for_model(planner_model)
 
         for attempt in range(3):
             strict_mode = attempt > 0
@@ -181,8 +184,8 @@ async def planner_node(state: AgentState) -> AgentState:
                 response = await call_llm(
                     prompt=user_prompt,
                     system_prompt=PLANNER_SYSTEM_PROMPT,
-                    model="gpt-4o",
-                    provider="openai",
+                    model=planner_model,
+                    provider=planner_provider,
                     temperature=0.2,
                     max_tokens=4096,
                     json_mode=True,
@@ -525,3 +528,22 @@ def _build_fallback_steps() -> list[StepDefinition]:
             estimated_complexity="low",
         ),
     ]
+
+
+def _get_planner_model() -> str:
+    """Resolve planner model from runtime settings with a safe open-source default."""
+    settings = get_settings()
+    configured = str(getattr(settings, "PRIMARY_MODEL", "") or "").strip()
+    if configured:
+        return configured
+    return "meta-llama/Llama-3.1-8B-Instruct"
+
+
+def _provider_for_model(model_name: str) -> str:
+    """Infer provider label from model naming while preferring open-source routing."""
+    normalized = model_name.strip().lower()
+    if normalized.startswith("claude"):
+        return "anthropic"
+    if normalized.startswith("gpt"):
+        return "openai"
+    return "open_source"

@@ -108,6 +108,7 @@ async def validator_node(state: AgentState) -> AgentState:
 
     try:
         model_name = _get_validation_model()
+        provider_name = _provider_for_model(model_name)
         validation_prompt = VALIDATOR_USER_PROMPT_TEMPLATE.format(
             step_name=step_name,
             step_description=step_description,
@@ -118,7 +119,7 @@ async def validator_node(state: AgentState) -> AgentState:
             prompt=validation_prompt,
             system_prompt=VALIDATOR_SYSTEM_PROMPT,
             model=model_name,
-            provider="openai",
+            provider=provider_name,
             temperature=0.1,
             max_tokens=1000,
             json_mode=True,
@@ -293,9 +294,19 @@ def _find_step_by_id(state: AgentState, step_id: str):
 
 
 def _get_validation_model() -> str:
-    """Resolve configured validation model with fallback to gpt-4o-mini."""
+    """Resolve configured validation model with fallback to a free open-source model."""
     settings = get_settings()
     configured = getattr(settings, "VALIDATION_MODEL", None)
     if isinstance(configured, str) and configured.strip():
         return configured.strip()
-    return "gpt-4o-mini"
+    return "mistralai/Mistral-7B-Instruct-v0.3"
+
+
+def _provider_for_model(model_name: str) -> str:
+    """Infer provider label from model naming while preferring open-source routing."""
+    normalized = model_name.strip().lower()
+    if normalized.startswith("claude"):
+        return "anthropic"
+    if normalized.startswith("gpt"):
+        return "openai"
+    return "open_source"
