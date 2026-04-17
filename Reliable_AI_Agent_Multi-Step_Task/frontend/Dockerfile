@@ -1,18 +1,27 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS build
 WORKDIR /app
-COPY package.json ./package.json
+
+COPY package*.json ./
 RUN npm install
 
-FROM deps AS build
-WORKDIR /app
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+
+FROM nginx:alpine AS production
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+
+
+FROM node:20-alpine AS development
 WORKDIR /app
-RUN npm install -g serve@14.2.4
-COPY --from=build /app/dist ./dist
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
 EXPOSE 5173
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

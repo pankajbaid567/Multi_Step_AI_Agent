@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from config import get_settings
-from routes import execute_router, tasks_router, traces_router
+from routes import chaos_config_router, config_router, execute_router, tasks_router, traces_router
 from services import close_redis_client, get_redis_client
 
 settings = get_settings()
@@ -87,8 +87,10 @@ async def shutdown_event() -> None:
 
 
 app.include_router(tasks_router, prefix="/tasks", tags=["tasks"])
-app.include_router(execute_router, prefix="/execute", tags=["execute"])
+app.include_router(execute_router, tags=["execute"])
 app.include_router(traces_router, prefix="/traces", tags=["traces"])
+app.include_router(config_router, tags=["config"])
+app.include_router(chaos_config_router, tags=["config"])
 
 
 @app.get("/health", tags=["health"])

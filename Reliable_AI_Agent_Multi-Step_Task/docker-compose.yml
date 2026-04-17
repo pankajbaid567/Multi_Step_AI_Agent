@@ -1,17 +1,41 @@
 version: "3.9"
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: reliable-agent-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: reliable-agent-backend
     env_file:
-      - ./backend/.env.example
+      - ./.env
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
     volumes:
       - ./backend:/app
 
@@ -19,21 +43,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     container_name: reliable-agent-frontend
     ports:
       - "5173:5173"
     depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: http://localhost:8000
 
-  redis:
-    image: redis:7.4-alpine
-    container_name: reliable-agent-redis
-    ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
-
-networks:
-  default:
-    name: reliable-ai-agent-network
+volumes:
+  redis-data:

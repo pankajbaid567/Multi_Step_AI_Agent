@@ -1,24 +1,36 @@
 """Public model exports for task and trace schemas."""
 
 from .task import (
+    Complexity,
+    ErrorEntry,
     ExecuteTaskRequest,
+    ExecutionEvent,
     StepDefinition,
     StepResult,
+    TaskRequest,
+    TaskResponse,
     TaskCreateRequest,
     TaskCreateResponse,
     TaskStatus,
+    ToolNeeded,
+    TraceEntry,
 )
-from .trace import ErrorEntry, TraceEvent, TraceEventType, ValidationVerdict
+from .trace import TraceEvent, TraceResponse
 
 __all__ = [
+    "Complexity",
+    "ErrorEntry",
     "ExecuteTaskRequest",
+    "ExecutionEvent",
     "StepDefinition",
     "StepResult",
+    "TaskRequest",
+    "TaskResponse",
     "TaskCreateRequest",
     "TaskCreateResponse",
     "TaskStatus",
-    "ErrorEntry",
+    "ToolNeeded",
+    "TraceEntry",
     "TraceEvent",
-    "TraceEventType",
-    "ValidationVerdict",
+    "TraceResponse",
 ]
