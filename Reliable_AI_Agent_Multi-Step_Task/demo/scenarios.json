@@ -1,0 +1,17 @@
+[
+  {
+    "id": "scenario-1",
+    "title": "Market research under uncertainty",
+    "task": "Analyze three AI coding assistants, compare pricing and reliability claims, and produce a recommendation with confidence level."
+  },
+  {
+    "id": "scenario-2",
+    "title": "Incident response checklist",
+    "task": "Create a multi-step incident response plan for a Redis outage affecting checkout, including communication, mitigation, and rollback steps."
+  },
+  {
+    "id": "scenario-3",
+    "title": "Launch plan synthesis",
+    "task": "Build a launch plan for a new B2B SaaS feature with dependencies across engineering, marketing, legal, and support teams."
+  }
+]
