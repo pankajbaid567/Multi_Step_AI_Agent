@@ -30,8 +30,11 @@ async def call_llm(prompt: str) -> dict[str, object]:
                 latency_ms = int((perf_counter() - started) * 1000)
                 return {"text": text, "tokens_used": 0, "latency_ms": latency_ms, "model_used": model_name}
 
-            response = await openai_client.responses.create(model=model_name, input=prompt)
-            text = getattr(response, "output_text", "")
+            response = await openai_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = response.choices[0].message.content or ""
             latency_ms = int((perf_counter() - started) * 1000)
             return {"text": text, "tokens_used": 0, "latency_ms": latency_ms, "model_used": model_name}
         except Exception:
