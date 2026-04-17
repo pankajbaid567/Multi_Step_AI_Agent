@@ -5,7 +5,10 @@ from __future__ import annotations
 from functools import lru_cache
 
 from dotenv import load_dotenv
-from pydantic.v1 import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except ModuleNotFoundError:  # pragma: no cover - compatibility fallback
+    from pydantic.v1 import BaseSettings
 
 load_dotenv()
 
@@ -19,6 +22,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     PRIMARY_MODEL: str = "gpt-4o"
     FALLBACK_MODEL: str = "claude-3-5-sonnet-20241022"
+    FALLBACK_MODEL_OPENAI: str | None = None
+    FALLBACK_MODEL_ANTHROPIC: str | None = None
     VALIDATION_MODEL: str = "gpt-4o-mini"
     MAX_RETRIES: int = 3
     STEP_TIMEOUT: int = 60
@@ -65,13 +70,13 @@ class Settings(BaseSettings):
     def fallback_model_openai(self) -> str:
         """Backward-compatible alias for OpenAI fallback model access."""
 
-        return self.FALLBACK_MODEL
+        return self.FALLBACK_MODEL_OPENAI or self.FALLBACK_MODEL
 
     @property
     def fallback_model_anthropic(self) -> str:
         """Backward-compatible alias for Anthropic fallback model access."""
 
-        return self.FALLBACK_MODEL
+        return self.FALLBACK_MODEL_ANTHROPIC or self.FALLBACK_MODEL
 
 
 @lru_cache(maxsize=1)
