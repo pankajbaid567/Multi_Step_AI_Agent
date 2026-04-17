@@ -1,55 +1,86 @@
-"""Application configuration and environment loading utilities."""
+"""Application settings for the Reliable AI Agent backend service."""
 
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
 from functools import lru_cache
 
 from dotenv import load_dotenv
+try:
+    from pydantic_settings import BaseSettings
+except ModuleNotFoundError:  # pragma: no cover - compatibility fallback
+    from pydantic.v1 import BaseSettings
 
 load_dotenv()
 
 
-@dataclass(frozen=True)
-class Settings:
-    """Typed settings loaded from environment variables."""
+class Settings(BaseSettings):
+    """Strongly typed runtime configuration loaded from environment variables."""
 
-    app_name: str
-    app_env: str
-    app_debug: bool
-    api_host: str
-    api_port: int
-    cors_origins: list[str]
-    redis_url: str
-    redis_ttl_seconds: int
-    openai_api_key: str
-    anthropic_api_key: str
-    tavily_api_key: str
-    primary_model: str
-    fallback_model_openai: str
-    fallback_model_anthropic: str
-    embedding_model: str
+    OPENAI_API_KEY: str
+    ANTHROPIC_API_KEY: str
+    TAVILY_API_KEY: str
+    REDIS_URL: str = "redis://localhost:6379"
+    PRIMARY_MODEL: str = "gpt-4o"
+    FALLBACK_MODEL: str = "claude-3-5-sonnet-20241022"
+    FALLBACK_MODEL_OPENAI: str | None = None
+    FALLBACK_MODEL_ANTHROPIC: str | None = None
+    VALIDATION_MODEL: str = "gpt-4o-mini"
+    MAX_RETRIES: int = 3
+    STEP_TIMEOUT: int = 60
+    MAX_STEPS: int = 15
+    CHAOS_MODE: bool = False
+    LOG_LEVEL: str = "INFO"
+
+    class Config:
+        """Pydantic configuration for environment-based settings loading."""
+
+        case_sensitive = True
+
+    @property
+    def openai_api_key(self) -> str:
+        """Backward-compatible alias for lowercase OpenAI API key access."""
+
+        return self.OPENAI_API_KEY
+
+    @property
+    def anthropic_api_key(self) -> str:
+        """Backward-compatible alias for lowercase Anthropic API key access."""
+
+        return self.ANTHROPIC_API_KEY
+
+    @property
+    def tavily_api_key(self) -> str:
+        """Backward-compatible alias for lowercase Tavily API key access."""
+
+        return self.TAVILY_API_KEY
+
+    @property
+    def redis_url(self) -> str:
+        """Backward-compatible alias for lowercase Redis URL access."""
+
+        return self.REDIS_URL
+
+    @property
+    def primary_model(self) -> str:
+        """Backward-compatible alias for lowercase primary model access."""
+
+        return self.PRIMARY_MODEL
+
+    @property
+    def fallback_model_openai(self) -> str:
+        """Backward-compatible alias for OpenAI fallback model access."""
+
+        return self.FALLBACK_MODEL_OPENAI or self.FALLBACK_MODEL
+
+    @property
+    def fallback_model_anthropic(self) -> str:
+        """Backward-compatible alias for Anthropic fallback model access."""
+
+        return self.FALLBACK_MODEL_ANTHROPIC or self.FALLBACK_MODEL
 
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Load and cache application settings from environment variables."""
-    raw_cors = os.getenv("CORS_ORIGINS", "http://localhost:5173")
-    return Settings(
-        app_name=os.getenv("APP_NAME", "Reliable AI Agent API"),
-        app_env=os.getenv("APP_ENV", "development"),
-        app_debug=os.getenv("APP_DEBUG", "false").lower() == "true",
-        api_host=os.getenv("API_HOST", "0.0.0.0"),
-        api_port=int(os.getenv("API_PORT", "8000")),
-        cors_origins=[origin.strip() for origin in raw_cors.split(",") if origin.strip()],
-        redis_url=os.getenv("REDIS_URL", "redis://redis:6379/0"),
-        redis_ttl_seconds=int(os.getenv("REDIS_TTL_SECONDS", "86400")),
-        openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
-        tavily_api_key=os.getenv("TAVILY_API_KEY", ""),
-        primary_model=os.getenv("PRIMARY_MODEL", "gpt-4o"),
-        fallback_model_openai=os.getenv("FALLBACK_MODEL_OPENAI", "gpt-4o-mini"),
-        fallback_model_anthropic=os.getenv("FALLBACK_MODEL_ANTHROPIC", "claude-3-5-sonnet-latest"),
-        embedding_model=os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
-    )
+    """Return a cached singleton settings instance for the current process."""
+
+    return Settings()
